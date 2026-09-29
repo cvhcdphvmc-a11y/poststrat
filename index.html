@@ -1,0 +1,1036 @@
+<title>Exposure Post-stratification Tool</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: one column, numbered steps top to bottom, results below. Tool, not a landing page. */
+:root{
+  --bg:#f4f5f7; --surface:#ffffff; --ink:#14181f; --ink2:#465060; --ink3:#5f6a7a; --line:#dde1e7; --line2:#eceff3;
+  --accent:#1f6bc4; --accent-ink:#ffffff; --s1:#2a78d6; --s2:#eb6834; --good:#1a6b43; --bad:#b3261e; --warn:#7d5200;
+  --bad-bg:#fbeceb; --warn-bg:#fdf3dc; --good-bg:#e5f3ec; --chip:#eef1f5;
+  --sans:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',sans-serif; --mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1216; --surface:#171b21; --ink:#eef1f5; --ink2:#b6bfcc; --ink3:#95a0af; --line:#2a303a; --line2:#20262e;
+  --accent:#4a94ec; --accent-ink:#0b1017; --s1:#3987e5; --s2:#d95926; --good:#4cc38a; --bad:#f2766d; --warn:#e0b34a;
+  --bad-bg:#2c1917; --warn-bg:#2a2313; --good-bg:#14261d; --chip:#212831; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1216; --surface:#171b21; --ink:#eef1f5; --ink2:#b6bfcc; --ink3:#95a0af; --line:#2a303a; --line2:#20262e;
+  --accent:#4a94ec; --accent-ink:#0b1017; --s1:#3987e5; --s2:#d95926; --good:#4cc38a; --bad:#f2766d; --warn:#e0b34a;
+  --bad-bg:#2c1917; --warn-bg:#2a2313; --good-bg:#14261d; --chip:#212831; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--sans);padding-inline:16px;padding-block:24px 64px}
+.wrap{max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+h1{font-size:1.6rem;line-height:1.2;margin:0;font-weight:600;text-wrap:balance}
+h2{font-size:1.05rem;margin:0;font-weight:600}
+h3{font-size:.95rem;margin:0 0 6px;font-weight:600}
+p{margin:0}
+.sub{color:var(--ink2);max-width:70ch}
+.banner{background:var(--warn-bg);color:var(--ink);border:1px solid var(--line);border-left:4px solid var(--warn);padding:10px 14px;border-radius:4px;font-size:.9rem}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:18px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.step{display:flex;align-items:baseline;gap:10px}
+.step .n{font:500 .8rem var(--mono);color:var(--ink3);border:1px solid var(--line);border-radius:4px;padding:1px 6px}
+label{font-size:.85rem;color:var(--ink2);display:flex;flex-direction:column;gap:4px;min-width:0}
+input,select,textarea,button{font:inherit;color:var(--ink)}
+input[type=text],input[type=number],select,textarea{background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:6px 8px;width:100%;min-width:0}
+textarea{font:13px/1.4 var(--mono);min-height:130px;resize:vertical;white-space:pre}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+.btns{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+button{cursor:pointer;border:1px solid var(--line);background:var(--surface);border-radius:4px;padding:7px 12px}
+button:hover{background:var(--chip)}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600;padding:9px 18px}
+button.primary:hover{filter:brightness(1.08)}
+button:disabled{opacity:.55;cursor:default}
+.chk{display:flex;flex-wrap:wrap;gap:6px 14px}
+.chk label{flex-direction:row;align-items:center;gap:6px;color:var(--ink)}
+.chk input{width:auto}
+.note{font-size:.85rem;color:var(--ink2)}
+.msgs{display:flex;flex-direction:column;gap:6px}
+.msg{padding:8px 12px;border-radius:4px;font-size:.88rem;border-left:4px solid var(--line);background:var(--chip)}
+.msg.err{border-left-color:var(--bad);background:var(--bad-bg)}
+.msg.warn{border-left-color:var(--warn);background:var(--warn-bg)}
+.msg.ok{border-left-color:var(--good);background:var(--good-bg)}
+.tw{overflow-x:auto;max-width:100%}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;font-size:.88rem}
+th,td{padding:6px 10px;text-align:right;border-bottom:1px solid var(--line2);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{font-weight:500;color:var(--ink2);font-size:.8rem;border-bottom:1px solid var(--line)}
+td.mono,.mono{font-family:var(--mono)}
+td input{width:84px;text-align:right;padding:4px 6px;font-family:var(--mono)}
+.sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:baseline}
+.cards2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.est{border:1px solid var(--line);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.est .big{font:500 2rem/1.1 var(--mono)}
+.est .lab{font-size:.8rem;color:var(--ink2)}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:.82rem;font-weight:600;padding:2px 10px;border-radius:99px;width:max-content}
+.pill.bad{background:var(--bad-bg);color:var(--bad)}
+.pill.good{background:var(--good-bg);color:var(--good)}
+.bar{display:flex;align-items:center;gap:6px}
+.bar i{display:block;height:8px;border-radius:2px;background:var(--s2)}
+.bar i.smp{background:var(--s1)}
+.tag{font-size:.72rem;background:var(--chip);border-radius:3px;padding:1px 6px;color:var(--ink2);margin-left:6px}
+.above{color:var(--bad);font-weight:600}
+details{border-top:1px solid var(--line2);padding-top:10px}
+summary{cursor:pointer;font-weight:500}
+.chart{position:relative}
+.chart svg{width:100%;height:auto;display:block}
+.chart text{fill:var(--ink2);font:11px var(--sans)}
+.chart .lbl{font-weight:600}
+.tip{position:absolute;pointer-events:none;background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:6px 9px;font-size:.8rem;box-shadow:0 2px 8px rgba(0,0,0,.15);white-space:nowrap;z-index:2}
+.prog{height:6px;background:var(--line2);border-radius:3px;overflow:hidden}
+.prog i{display:block;height:100%;background:var(--accent);width:0}
+.eq{font-family:var(--mono);font-size:.85rem;background:var(--chip);padding:8px 12px;border-radius:4px;overflow-x:auto;white-space:pre}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px}
+
+.chips{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:99px;padding:4px 12px;font-size:.88rem;cursor:pointer;background:var(--bg);color:var(--ink2);user-select:none}
+.chip:has(input:checked){background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:500}
+.chip input{position:absolute;opacity:0;pointer-events:none}
+.chip:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:2px}
+.pctbox{position:relative;display:inline-block}
+.pctbox input{width:96px;padding-right:22px}
+.pctbox span{position:absolute;right:8px;top:50%;transform:translateY(-50%);color:var(--ink3);font-size:.85rem;pointer-events:none}
+.total{display:inline-flex;align-items:center;gap:8px;font-weight:600;padding:4px 12px;border-radius:99px;font-size:.88rem;width:max-content}
+.total.ok{background:var(--good-bg);color:var(--good)}
+.total.bad{background:var(--bad-bg);color:var(--bad)}
+.hint{font-size:.85rem;color:var(--ink2)}
+#wTable th,#wTable td{text-align:center}
+#tDecision th,#tDecision td{text-align:center}
+#tDecision th:first-child,#tDecision td:first-child{text-align:left}
+#tDecision tr.grp td{background:var(--chip);color:var(--ink2);font-size:.8rem;font-weight:600;text-align:left;padding-block:4px}
+.line{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center}
+</style>
+<div class="wrap">
+  <header style="display:flex;flex-direction:column;gap:8px">
+    <h1>Post-stratification tool for exposure data</h1>
+  </header>
+
+  <section class="card" aria-labelledby="h1">
+    <h2 id="h1">1. Measurements</h2>
+    <textarea id="paste" spellcheck="false" aria-label="Measurement table" placeholder="Paste a table with a header row, one result per row. Write results below the limit of quantitation as &lt;0.2.&#10;&#10;Operation,Weather,Result&#10;pouring,still,3.88&#10;finishing,breezy,&lt;0.214"></textarea>
+    <div class="line">
+      <button id="btnExample" type="button">Load foundry example</button>
+      <label style="flex-direction:row;align-items:center;gap:8px">or upload a CSV <input type="file" id="file" accept=".csv,.tsv,.txt"></label>
+    </div>
+    <div id="dataMsgs" class="msgs" aria-live="polite"></div>
+    <div id="mapping" hidden style="display:flex;flex-direction:column;gap:14px">
+      <div class="row">
+        <label id="lblValue">Result column<select id="colValue"></select></label>
+        <label>Exposure standard<input type="number" id="oel" step="any" min="0" value="5"></label>
+        <label>Units<input type="text" id="units" value="mg/m³"></label>
+      </div>
+      <div>
+        <div class="hint" style="margin-bottom:6px">Split by (work conditions that change exposure)</div>
+        <div id="factorBox" class="chips"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" id="stepWeights" hidden aria-labelledby="h2">
+    <h2 id="h2">2. Population shares</h2>
+    <p class="hint">Share of working time in each condition, from schedules or records.</p>
+    <div class="tw"><table id="wTable"></table></div>
+    <div class="line"><span id="wTotal" class="total ok"></span><button id="btnEqual" type="button">Equal shares</button></div>
+    <div class="line" style="margin-top:4px"><button id="btnRun" class="primary" type="button">Run analysis</button><span id="runNote" class="hint"></span></div>
+    <div class="prog" id="prog" hidden><i></i></div>
+    <div id="runMsgs" class="msgs" aria-live="polite"></div>
+  </section>
+
+  <div id="results" style="display:flex;flex-direction:column;gap:20px" hidden>
+    <section class="card" aria-labelledby="h3r">
+      <h2 id="h3r">Result</h2>
+      <div id="cards" class="cards2"></div>
+      <div id="resMsgs" class="msgs"></div>
+      <div>
+        <div id="legend" class="hint" style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:4px"></div>
+        <div class="chart" id="chart"></div>
+      </div>
+    </section>
+    <section class="card">
+      <h2>Decision statistics</h2>
+      <div class="tw"><table id="tDecision"></table></div>
+      <p class="hint">UCL: upper credible limit. Red values are above the exposure standard (95th percentile) or above 5% (exceedance fraction).</p>
+    </section>
+    <div id="diag"></div>
+    <div class="line"><button id="btnCopy" type="button">Copy results summary</button><span id="copyNote" class="hint"></span></div>
+  </div>
+</div>
+
+<script>
+/* Post-stratified censored lognormal model: sampler and population statistics.
+ * Mirrors stan/poststrat.stan (regularised regression with post-stratification).
+ * Plain JavaScript, no dependencies. Runs in a browser tab or in Node.
+ */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory();
+  else root.PS = factory();
+})(typeof self !== 'undefined' ? self : this, function () {
+  'use strict';
+
+  var LOG_SQRT_2PI = 0.9189385332046727;
+
+  // ---------------------------------------------------------------- normal
+  // Lower tail Phi(-a) for a >= 0 (Hart 1968 rational form, as tabulated by West 2005).
+  function normTail(a) {
+    if (a > 37) return 0;
+    var e = Math.exp(-a * a / 2), r, b;
+    if (a < 7.07106781186547) {
+      b = 3.52624965998911E-02 * a + 0.700383064443688;
+      b = b * a + 6.37396220353165;
+      b = b * a + 33.912866078383;
+      b = b * a + 112.079291497871;
+      b = b * a + 221.213596169931;
+      b = b * a + 220.206867912376;
+      r = e * b;
+      b = 8.83883476483184E-02 * a + 1.75566716318264;
+      b = b * a + 16.064177579207;
+      b = b * a + 86.7807322029461;
+      b = b * a + 296.564248779674;
+      b = b * a + 637.333633378831;
+      b = b * a + 793.826512519948;
+      b = b * a + 440.413735824752;
+      r = r / b;
+    } else {
+      b = a + 0.65;
+      b = a + 4 / b;
+      b = a + 3 / b;
+      b = a + 2 / b;
+      b = a + 1 / b;
+      r = e / b / 2.506628274631;
+    }
+    return r;
+  }
+  function pnorm(x) { return x < 0 ? normTail(-x) : 1 - normTail(x); }
+  function logPhi(z) {
+    if (z >= 0) return Math.log1p(-normTail(z));
+    var a = -z;
+    if (a > 37) {
+      var a2 = a * a;
+      return -a2 / 2 - Math.log(a) - LOG_SQRT_2PI + Math.log(1 - 1 / a2 + 3 / (a2 * a2) - 15 / (a2 * a2 * a2));
+    }
+    return Math.log(normTail(a));
+  }
+
+  // ------------------------------------------------------------------- rng
+  function makeRng(seed) {
+    var s = (seed >>> 0) || 1;
+    function splitmix() {
+      s = (s + 0x9e3779b9) >>> 0;
+      var z = s;
+      z = Math.imul(z ^ (z >>> 16), 0x85ebca6b) >>> 0;
+      z = Math.imul(z ^ (z >>> 13), 0xc2b2ae35) >>> 0;
+      return (z ^ (z >>> 16)) >>> 0;
+    }
+    var a = splitmix(), b = splitmix(), c = splitmix(), d = splitmix();
+    function rotl(x, k) { return ((x << k) | (x >>> (32 - k))) >>> 0; }
+    function uniform() { // open interval (0,1)
+      var r = Math.imul(rotl(Math.imul(b, 5) >>> 0, 7), 9) >>> 0;
+      var t = (b << 9) >>> 0;
+      c ^= a; d ^= b; b ^= c; a ^= d; c ^= t; d = rotl(d, 11);
+      a >>>= 0; b >>>= 0; c >>>= 0; d >>>= 0;
+      return (r + 0.5) / 4294967296;
+    }
+    var spare = null;
+    function normal() {
+      if (spare !== null) { var v = spare; spare = null; return v; }
+      var u, v2, q;
+      do { u = 2 * uniform() - 1; v2 = 2 * uniform() - 1; q = u * u + v2 * v2; } while (q >= 1 || q === 0);
+      var m = Math.sqrt(-2 * Math.log(q) / q);
+      spare = v2 * m;
+      return u * m;
+    }
+    return { uniform: uniform, normal: normal };
+  }
+
+  // ----------------------------------------------------------------- model
+  // spec: { J, K, X (J rows of K), G, sigmaGroup (J), priorMean (K), priorSd (K),
+  //         sLogMean, sLogSd, cell (N), y (N), cens (N: 0/1) }
+  function makeModel(spec) {
+    var J = spec.J, K = spec.K, G = spec.G, D = K + G;
+    var X = spec.X, sg = spec.sigmaGroup;
+    var nq = new Float64Array(J), S1 = new Float64Array(J), S2 = new Float64Array(J);
+    var cj = [], cl = [];
+    for (var i = 0; i < spec.y.length; i++) {
+      var j = spec.cell[i];
+      if (spec.cens[i]) { cj.push(j); cl.push(spec.y[i]); }
+      else { nq[j] += 1; S1[j] += spec.y[i]; S2[j] += spec.y[i] * spec.y[i]; }
+    }
+    var Nc = cj.length;
+    var mu = new Float64Array(J), gmu = new Float64Array(J), sig = new Float64Array(G);
+    var pm = spec.priorMean, ps = spec.priorSd, slm = spec.sLogMean, sls = spec.sLogSd;
+
+    function logpGrad(q, g) {
+      var lp = 0, k, j, gi, d;
+      for (k = 0; k < D; k++) g[k] = 0;
+      for (k = 0; k < K; k++) { d = (q[k] - pm[k]) / ps[k]; lp -= 0.5 * d * d; g[k] -= d / ps[k]; }
+      for (gi = 0; gi < G; gi++) {
+        var u = q[K + gi]; d = (u - slm) / sls; lp -= 0.5 * d * d; g[K + gi] -= d / sls;
+        sig[gi] = Math.exp(u);
+      }
+      for (j = 0; j < J; j++) {
+        var m = 0, row = X[j];
+        for (k = 0; k < K; k++) m += row[k] * q[k];
+        mu[j] = m; gmu[j] = 0;
+      }
+      for (j = 0; j < J; j++) {
+        var n = nq[j];
+        if (n > 0) {
+          gi = sg[j];
+          var s = sig[gi], inv2 = 1 / (s * s);
+          var ss = S2[j] - 2 * mu[j] * S1[j] + n * mu[j] * mu[j];
+          lp += -n * q[K + gi] - 0.5 * ss * inv2;
+          gmu[j] += (S1[j] - n * mu[j]) * inv2;
+          g[K + gi] += -n + ss * inv2;
+        }
+      }
+      for (var c = 0; c < Nc; c++) {
+        j = cj[c]; gi = sg[j];
+        var s2 = sig[gi], z = (cl[c] - mu[j]) / s2, lph = logPhi(z);
+        lp += lph;
+        var lam = Math.exp(-0.5 * z * z - LOG_SQRT_2PI - lph);
+        gmu[j] += -lam / s2;
+        g[K + gi] += -lam * z;
+      }
+      for (j = 0; j < J; j++) {
+        var row2 = X[j], gj = gmu[j];
+        if (gj !== 0) for (k = 0; k < K; k++) g[k] += row2[k] * gj;
+      }
+      return lp;
+    }
+    return { dim: D, K: K, G: G, logpGrad: logpGrad };
+  }
+
+  // ------------------------------------------------------------------ NUTS
+  function runChain(model, o, seed, onProgress) {
+    var D = model.dim, rng = makeRng(seed), MAXDEPTH = o.maxTreedepth || 10;
+    var invM = new Float64Array(D).fill(1);
+
+    function newState() { return { q: new Float64Array(D), p: new Float64Array(D), g: new Float64Array(D), lp: 0 }; }
+    function H(z) {
+      var k = 0;
+      for (var i = 0; i < D; i++) k += invM[i] * z.p[i] * z.p[i];
+      return -z.lp + 0.5 * k;
+    }
+    function leapfrog(z, eps) {
+      var out = newState(), i;
+      for (i = 0; i < D; i++) out.p[i] = z.p[i] + 0.5 * eps * z.g[i];
+      for (i = 0; i < D; i++) out.q[i] = z.q[i] + eps * invM[i] * out.p[i];
+      out.lp = model.logpGrad(out.q, out.g);
+      for (i = 0; i < D; i++) out.p[i] += 0.5 * eps * out.g[i];
+      return out;
+    }
+    function noUturn(a, b) { // a = minus end, b = plus end
+      var d1 = 0, d2 = 0;
+      for (var i = 0; i < D; i++) { var dq = b.q[i] - a.q[i]; d1 += dq * a.p[i]; d2 += dq * b.p[i]; }
+      return d1 >= 0 && d2 >= 0;
+    }
+    var nleap = 0, divergent = false;
+    function buildTree(z, v, j, eps, logu, H0) {
+      if (j === 0) {
+        var z1 = leapfrog(z, v * eps); nleap++;
+        var H1 = H(z1), ok = isFinite(H1);
+        var n = (ok && logu <= -H1) ? 1 : 0;
+        var s = ok && (logu < -H1 + 1000);
+        if (!s) divergent = true;
+        return { minus: z1, plus: z1, prop: z1, n: n, s: s, alpha: ok ? Math.min(1, Math.exp(H0 - H1)) : 0, nalpha: 1 };
+      }
+      var t = buildTree(z, v, j - 1, eps, logu, H0);
+      if (t.s) {
+        var t2;
+        if (v === -1) { t2 = buildTree(t.minus, v, j - 1, eps, logu, H0); t.minus = t2.minus; }
+        else { t2 = buildTree(t.plus, v, j - 1, eps, logu, H0); t.plus = t2.plus; }
+        if (t2.n > 0 && rng.uniform() < t2.n / (t.n + t2.n)) t.prop = t2.prop;
+        t.alpha += t2.alpha; t.nalpha += t2.nalpha;
+        t.s = t2.s && noUturn(t.minus, t.plus);
+        t.n += t2.n;
+      }
+      return t;
+    }
+    function drawMomentum(z) {
+      for (var i = 0; i < D; i++) z.p[i] = rng.normal() / Math.sqrt(invM[i]);
+    }
+    function transition(q, g, lp, eps) {
+      var z0 = newState();
+      z0.q.set(q); z0.g.set(g); z0.lp = lp; drawMomentum(z0);
+      var H0 = H(z0), logu = -H0 + Math.log(rng.uniform());
+      var minus = z0, plus = z0, prop = z0, n = 1, s = true, j = 0, aSum = 0, aN = 0;
+      divergent = false; nleap = 0;
+      while (s && j < MAXDEPTH) {
+        var v = rng.uniform() < 0.5 ? -1 : 1, t;
+        if (v === -1) { t = buildTree(minus, -1, j, eps, logu, H0); minus = t.minus; }
+        else { t = buildTree(plus, 1, j, eps, logu, H0); plus = t.plus; }
+        if (t.s && rng.uniform() < Math.min(1, t.n / n)) prop = t.prop;
+        n += t.n;
+        s = t.s && noUturn(minus, plus);
+        aSum += t.alpha; aN += t.nalpha;
+        j++;
+      }
+      return { z: prop, accept: aSum / aN, depth: j, hitMax: s && j >= MAXDEPTH, divergent: divergent, nleap: nleap };
+    }
+    function findEps(q, g, lp, eps) {
+      var z0 = newState(); z0.q.set(q); z0.g.set(g); z0.lp = lp; drawMomentum(z0);
+      var H0 = H(z0), z1 = leapfrog(z0, eps), dH = H0 - H(z1);
+      if (!isFinite(dH)) dH = -Infinity;
+      var a = dH > Math.log(0.5) ? 1 : -1, it = 0;
+      while (a * dH > -a * Math.log(2) && it < 60) {
+        eps *= Math.pow(2, a);
+        z1 = leapfrog(z0, eps); dH = H0 - H(z1);
+        if (!isFinite(dH)) dH = -Infinity;
+        it++;
+      }
+      return eps;
+    }
+
+    // initial point: uniform(-2, 2) on the unconstrained scale, as Stan does
+    var q = new Float64Array(D), g = new Float64Array(D), lp = -Infinity, tries = 0;
+    while (tries < 200) {
+      for (var i = 0; i < D; i++) q[i] = 4 * rng.uniform() - 2;
+      lp = model.logpGrad(q, g);
+      var fin = isFinite(lp); for (i = 0; i < D; i++) fin = fin && isFinite(g[i]);
+      if (fin) break;
+      tries++;
+    }
+    if (tries >= 200) throw new Error('Could not find a starting point with finite density.');
+
+    var warmup = o.warmup, iter = o.iter, delta = o.adaptDelta;
+    var eps = findEps(q, g, lp, 1);
+    var mu = Math.log(10 * eps), Hbar = 0, logEpsBar = 0, m = 0, gamma = 0.05, t0 = 10, kappa = 0.75;
+    var initBuf = 75, termBuf = 50, base = 25;
+    if (warmup < 150) { initBuf = Math.floor(0.15 * warmup); termBuf = Math.floor(0.1 * warmup); base = warmup - initBuf - termBuf; }
+    var endAdapt = warmup - termBuf, ends = [], start = initBuf, size = base;
+    while (start < endAdapt && size > 0) {
+      var end = start + size;
+      if (end + 2 * size > endAdapt) end = endAdapt;
+      ends.push(end); start = end; size *= 2;
+    }
+    var wn = 0, wmean = new Float64Array(D), wm2 = new Float64Array(D), wi = 0;
+
+    var res = { draws: new Float64Array(iter * D), lp: new Float64Array(iter), divergent: 0, hitMax: 0, nleap: 0, eps: 0, invM: null };
+    var total = warmup + iter;
+    for (var it2 = 0; it2 < total; it2++) {
+      var tr = transition(q, g, lp, eps);
+      q = tr.z.q; g = tr.z.g; lp = tr.z.lp;
+      if (it2 < warmup) {
+        m++;
+        var eta = 1 / (m + t0);
+        Hbar = (1 - eta) * Hbar + eta * (delta - tr.accept);
+        var logEps = mu - Math.sqrt(m) / gamma * Hbar, xi = Math.pow(m, -kappa);
+        logEpsBar = xi * logEps + (1 - xi) * logEpsBar;
+        eps = Math.exp(logEps);
+        if (it2 >= initBuf && it2 < endAdapt) {
+          wn++;
+          for (i = 0; i < D; i++) { var dlt = q[i] - wmean[i]; wmean[i] += dlt / wn; wm2[i] += dlt * (q[i] - wmean[i]); }
+        }
+        if (wi < ends.length && it2 + 1 === ends[wi]) {
+          for (i = 0; i < D; i++) {
+            var vr = wm2[i] / (wn - 1);
+            invM[i] = (wn / (wn + 5)) * vr + 1e-3 * (5 / (wn + 5));
+          }
+          wn = 0; wmean.fill(0); wm2.fill(0); wi++;
+          eps = findEps(q, g, lp, eps);
+          mu = Math.log(10 * eps); Hbar = 0; logEpsBar = 0; m = 0;
+        }
+        if (it2 + 1 === warmup) eps = Math.exp(logEpsBar);
+      } else {
+        var r = it2 - warmup;
+        res.draws.set(q, r * D); res.lp[r] = lp;
+        if (tr.divergent) res.divergent++;
+        if (tr.hitMax) res.hitMax++;
+        res.nleap += tr.nleap;
+      }
+      if (onProgress && (it2 % 250 === 0)) onProgress(it2 / total);
+    }
+    res.eps = eps; res.invM = Array.prototype.slice.call(invM);
+    return res;
+  }
+
+  // ------------------------------------------------------- diagnostics
+  // split R-hat and effective sample size (Geyer initial monotone sequence)
+  function rhatEss(chains) {
+    var split = [], c, n0 = chains[0].length, half = Math.floor(n0 / 2);
+    for (c = 0; c < chains.length; c++) {
+      split.push(chains[c].subarray ? chains[c].subarray(0, half) : chains[c].slice(0, half));
+      split.push(chains[c].subarray ? chains[c].subarray(n0 - half, n0) : chains[c].slice(n0 - half, n0));
+    }
+    var m = split.length, n = half, i, j;
+    var means = [], vars = [];
+    for (j = 0; j < m; j++) {
+      var mn = 0; for (i = 0; i < n; i++) mn += split[j][i]; mn /= n; means.push(mn);
+      var v = 0; for (i = 0; i < n; i++) v += (split[j][i] - mn) * (split[j][i] - mn); vars.push(v / (n - 1));
+    }
+    var W = 0, gm = 0; for (j = 0; j < m; j++) { W += vars[j]; gm += means[j]; } W /= m; gm /= m;
+    var B = 0; for (j = 0; j < m; j++) B += (means[j] - gm) * (means[j] - gm); B = B * n / (m - 1);
+    var varPlus = (n - 1) / n * W + B / n;
+    var rhat = W > 0 ? Math.sqrt(varPlus / W) : 1;
+    if (!(varPlus > 0)) return { rhat: 1, ess: m * n };
+    function acov(t) {
+      var tot = 0;
+      for (var jj = 0; jj < m; jj++) {
+        var s = 0, x = split[jj], mm = means[jj];
+        for (var ii = 0; ii < n - t; ii++) s += (x[ii] - mm) * (x[ii + t] - mm);
+        tot += s / n;
+      }
+      return tot / m;
+    }
+    var rho = function (t) { return 1 - (W - acov(t)) / varPlus; };
+    var sum = 0, prevPair = Infinity, t = 0;
+    while (t + 1 < n - 3) {
+      var pair = rho(t) + rho(t + 1);
+      if (pair < 0) break;
+      if (pair > prevPair) pair = prevPair;
+      prevPair = pair; sum += pair; t += 2;
+    }
+    var tau = -1 + 2 * sum;
+    if (tau < 1 / Math.log10(m * n)) tau = 1 / Math.log10(m * n);
+    return { rhat: rhat, ess: m * n / tau };
+  }
+
+  // ------------------------------------------------------------ population
+  // Per-draw population statistics from cell means, sigma per cell, weights, OEL.
+  function popStatsOne(mu, sig, w, oel, out, jOut) {
+    var J = mu.length, j, mubar = 0, am = 0, m2 = 0, within = 0, exc = 0;
+    for (j = 0; j < J; j++) {
+      mubar += w[j] * mu[j];
+      m2 += w[j] * mu[j] * mu[j];
+      within += w[j] * sig[j] * sig[j];
+    }
+    var cellAM = jOut.cellAM, cellExc = jOut.cellExc;
+    for (j = 0; j < J; j++) {
+      cellAM[j] = oel * Math.exp(mu[j] + 0.5 * sig[j] * sig[j]);
+      cellExc[j] = pnorm(mu[j] / sig[j]);
+      am += w[j] * cellAM[j];
+      exc += w[j] * cellExc[j];
+    }
+    // P95 by bisection on the weighted CDF (never from GM and GSD)
+    var lo = Infinity, hi = -Infinity;
+    for (j = 0; j < J; j++) { lo = Math.min(lo, mu[j] - 10 * sig[j]); hi = Math.max(hi, mu[j] + 10 * sig[j]); }
+    for (var it = 0; it < 200; it++) {
+      var mid = 0.5 * (lo + hi), F = 0;
+      for (j = 0; j < J; j++) F += w[j] * pnorm((mid - mu[j]) / sig[j]);
+      if (F < 0.95) lo = mid; else hi = mid;
+      if (hi - lo < 1e-10) break;
+    }
+    out.gm = oel * Math.exp(mubar);
+    out.am = am;
+    out.gsd = Math.exp(Math.sqrt(within + m2 - mubar * mubar));
+    out.p95 = oel * Math.exp(0.5 * (lo + hi));
+    out.exc = exc;
+    for (j = 0; j < J; j++) {
+      jOut.amShare[j] = w[j] * cellAM[j] / am;
+      jOut.excShare[j] = exc > 0 ? w[j] * cellExc[j] / exc : 0;
+    }
+  }
+
+  function quantile(sortedArr, p) { // type 7
+    var n = sortedArr.length, h = (n - 1) * p, lo = Math.floor(h), hi = Math.ceil(h);
+    return sortedArr[lo] + (h - lo) * (sortedArr[hi] - sortedArr[lo]);
+  }
+  function sortedCopy(a) { var b = Float64Array.from(a); b.sort(); return b; }
+  function summarise(arr) {
+    var s = sortedCopy(arr), mean = 0, i;
+    for (i = 0; i < arr.length; i++) mean += arr[i]; mean /= arr.length;
+    return {
+      mean: mean, median: quantile(s, 0.5),
+      q025: quantile(s, 0.025), q05: quantile(s, 0.05), q95: quantile(s, 0.95), q975: quantile(s, 0.975),
+      ucl70: quantile(s, 0.70), ucl90: quantile(s, 0.90), ucl95: quantile(s, 0.95),
+      min: s[0], max: s[s.length - 1]
+    };
+  }
+
+  // -------------------------------------------------------------- fitting
+  // input: { y[], cens[], cell[], J, K, X, G, sigmaGroup, priorMean, priorSd, sLogMean, sLogSd,
+  //          w[], oel, chains, warmup, iter, adaptDelta, seed }
+  function yieldToUi() { return new Promise(function (r) { setTimeout(r, 0); }); }
+
+  async function fitEstimator(inp, onProgress) {
+    var model = makeModel(inp), chains = inp.chains || 4, D = model.dim;
+    var chainRes = [], t0 = Date.now();
+    for (var c = 0; c < chains; c++) {
+      var r = runChain(model, { warmup: inp.warmup, iter: inp.iter, adaptDelta: inp.adaptDelta }, ((inp.seed >>> 0) + c * 1000003) >>> 0,
+        null);
+      chainRes.push(r);
+      if (onProgress) onProgress((c + 1) / chains);
+      await yieldToUi();
+    }
+    var S = inp.iter * chains, K = inp.K, G = inp.G, J = inp.J;
+    var theta = [], sigma = [], k, g, i;
+    for (k = 0; k < K; k++) theta.push(new Float64Array(S));
+    for (g = 0; g < G; g++) sigma.push(new Float64Array(S));
+    var lpAll = new Float64Array(S);
+    for (c = 0; c < chains; c++) {
+      var d = chainRes[c].draws;
+      for (i = 0; i < inp.iter; i++) {
+        var row = c * inp.iter + i;
+        for (k = 0; k < K; k++) theta[k][row] = d[i * D + k];
+        for (g = 0; g < G; g++) sigma[g][row] = Math.exp(d[i * D + K + g]);
+        lpAll[row] = chainRes[c].lp[i];
+      }
+    }
+    // derived quantities per draw
+    var stats = { gm: new Float64Array(S), am: new Float64Array(S), gsd: new Float64Array(S), p95: new Float64Array(S), exc: new Float64Array(S) };
+    var cells = { mu: [], gm: [], am: [], exc: [], amShare: [], excShare: [] };
+    for (var j = 0; j < J; j++) for (var key in cells) cells[key].push(new Float64Array(S));
+    var mu = new Float64Array(J), sg = new Float64Array(J), tmp = {}, jOut = { cellAM: new Float64Array(J), cellExc: new Float64Array(J), amShare: new Float64Array(J), excShare: new Float64Array(J) };
+    for (var s = 0; s < S; s++) {
+      for (j = 0; j < J; j++) {
+        var m = 0; for (k = 0; k < K; k++) m += inp.X[j][k] * theta[k][s];
+        mu[j] = m; sg[j] = sigma[inp.sigmaGroup[j]][s];
+      }
+      popStatsOne(mu, sg, inp.w, inp.oel, tmp, jOut);
+      stats.gm[s] = tmp.gm; stats.am[s] = tmp.am; stats.gsd[s] = tmp.gsd; stats.p95[s] = tmp.p95; stats.exc[s] = tmp.exc;
+      for (j = 0; j < J; j++) {
+        cells.mu[j][s] = mu[j];
+        cells.gm[j][s] = inp.oel * Math.exp(mu[j]);
+        cells.am[j][s] = jOut.cellAM[j];
+        cells.exc[j][s] = jOut.cellExc[j];
+        cells.amShare[j][s] = jOut.amShare[j];
+        cells.excShare[j][s] = jOut.excShare[j];
+      }
+    }
+    // diagnostics
+    function perChain(arr, tf) {
+      var out = [];
+      for (var cc = 0; cc < chains; cc++) {
+        var a = new Float64Array(inp.iter);
+        for (var ii = 0; ii < inp.iter; ii++) a[ii] = tf ? tf(arr[cc * inp.iter + ii]) : arr[cc * inp.iter + ii];
+        out.push(a);
+      }
+      return out;
+    }
+    var diag = { rhat: {}, ess: {}, maxRhat: 0, minEss: Infinity };
+    function addDiag(name, arr, tf) {
+      var re = rhatEss(perChain(arr, tf));
+      diag.rhat[name] = re.rhat; diag.ess[name] = re.ess;
+      if (re.rhat > diag.maxRhat) diag.maxRhat = re.rhat;
+      if (re.ess < diag.minEss) diag.minEss = re.ess;
+    }
+    for (k = 0; k < K; k++) addDiag('theta' + (k + 1), theta[k]);
+    for (g = 0; g < G; g++) addDiag('sigma' + (g + 1), sigma[g], Math.log);
+    addDiag('gm', stats.gm, Math.log); addDiag('p95', stats.p95, Math.log);
+    addDiag('am', stats.am, Math.log); addDiag('exc', stats.exc);
+    diag.divergent = 0; diag.hitMax = 0; diag.nleap = 0;
+    for (c = 0; c < chains; c++) { diag.divergent += chainRes[c].divergent; diag.hitMax += chainRes[c].hitMax; diag.nleap += chainRes[c].nleap; }
+    diag.draws = S; diag.chains = chains; diag.seconds = (Date.now() - t0) / 1000;
+    diag.stepSizes = chainRes.map(function (r) { return r.eps; });
+    return { theta: theta, sigma: sigma, stats: stats, cells: cells, diag: diag, lp: lpAll };
+  }
+
+  // ------------------------------------------------------- design building
+  // factors: [{ name, levels: [..] }]. First level of a two-level factor is coded +1.
+  function effectCodeMatrix(L) { // L x (L-1)
+    var M = [];
+    for (var l = 0; l < L; l++) {
+      var row = new Array(L - 1).fill(0);
+      if (l < L - 1) row[l] = 1; else row.fill(-1);
+      M.push(row);
+    }
+    return M;
+  }
+  function buildDesign(factors, opts) {
+    opts = opts || {};
+    var F = factors.length, J = 1, f, j;
+    for (f = 0; f < F; f++) J *= factors[f].levels.length;
+    var cells = [];
+    for (j = 0; j < J; j++) {
+      var idx = [], r = j;
+      for (f = F - 1; f >= 0; f--) { var L = factors[f].levels.length; idx[f] = r % L; r = Math.floor(r / L); }
+      cells.push({ idx: idx, label: idx.map(function (li, ff) { return factors[ff].levels[li]; }).join(' / ') });
+    }
+    var codes = factors.map(function (fa) { return effectCodeMatrix(fa.levels.length); });
+    var cols = [{ name: 'alpha', kind: 'intercept', mean: opts.alphaMean, sd: opts.alphaSd, get: function () { return 1; } }];
+    factors.forEach(function (fa, ff) {
+      for (var c = 0; c < fa.levels.length - 1; c++) {
+        (function (ff, c) {
+          cols.push({ name: fa.name + ': ' + fa.levels[c], kind: 'main', factor: ff, level: c, mean: 0, sd: opts.mainSd, get: function (cell) { return codes[ff][cell.idx[ff]][c]; } });
+        })(ff, c);
+      }
+    });
+    if (opts.interactions) {
+      for (var a = 0; a < F; a++) for (var b = a + 1; b < F; b++) {
+        for (var ca = 0; ca < factors[a].levels.length - 1; ca++) for (var cb = 0; cb < factors[b].levels.length - 1; cb++) {
+          (function (a, b, ca, cb) {
+            cols.push({ name: factors[a].name + ' x ' + factors[b].name, kind: 'interaction', mean: 0, sd: opts.intSd, get: function (cell) { return codes[a][cell.idx[a]][ca] * codes[b][cell.idx[b]][cb]; } });
+          })(a, b, ca, cb);
+        }
+      }
+    }
+    var X = cells.map(function (cell) { return cols.map(function (col) { return col.get(cell); }); });
+    return { cells: cells, X: X, K: cols.length, J: J, priorMean: cols.map(function (c) { return c.mean; }), priorSd: cols.map(function (c) { return c.sd; }), colNames: cols.map(function (c) { return c.name; }), cols: cols };
+  }
+
+  return {
+    pnorm: pnorm, logPhi: logPhi, makeRng: makeRng, makeModel: makeModel, runChain: runChain,
+    rhatEss: rhatEss, popStatsOne: popStatsOne, summarise: summarise, quantile: quantile, sortedCopy: sortedCopy,
+    fitEstimator: fitEstimator, buildDesign: buildDesign, effectCodeMatrix: effectCodeMatrix
+  };
+});
+
+</script>
+<script>
+'use strict';
+var EXAMPLE = {"csv": "Operation,Weather,Result (mg/m3)\npouring,still,3.882\npouring,still,5.505\npouring,still,3.624\nfinishing,still,0.8534\nfinishing,still,0.9761\nfinishing,still,<0.214\nfinishing,still,<0.214\nfinishing,still,2.804\nfinishing,still,0.4598\nfinishing,still,0.2758\nfinishing,still,1.616\nfinishing,still,0.6023\nfinishing,still,0.7666\nfinishing,still,0.5517\npouring,breezy,1.981\nfinishing,breezy,0.2914\nfinishing,breezy,1.308\nfinishing,breezy,0.6376\nfinishing,breezy,0.4672\nfinishing,breezy,<0.214\nfinishing,breezy,0.3128\nfinishing,breezy,<0.214\nfinishing,breezy,0.2833\nfinishing,breezy,0.3628", "oel": 5, "weights": {"pouring / still": 18, "pouring / breezy": 12, "finishing / still": 42, "finishing / breezy": 28}};
+var $ = function (id) { return document.getElementById(id); };
+function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+var S = { table: null, weights: {}, last: null };
+
+// ------------------------------------------------------------ number format
+function fmt(x) {
+  if (!isFinite(x)) return '–';
+  var a = Math.abs(x);
+  if (a === 0) return '0';
+  if (a >= 100) return x.toFixed(0);
+  if (a >= 10) return x.toFixed(1);
+  if (a >= 1) return x.toFixed(2);
+  if (a >= 0.01) return x.toPrecision(2).replace(/0+$/, '').replace(/\.$/, '') ;
+  return x.toExponential(1);
+}
+function fmt3(x) { if (!isFinite(x)) return '–'; var a = Math.abs(x); if (a >= 100) return x.toFixed(0); if (a >= 10) return x.toFixed(1); if (a >= 1) return x.toFixed(2); return x.toFixed(3); }
+function pct(x) { if (!isFinite(x)) return '–'; var p = 100 * x; if (p >= 10) return p.toFixed(0) + '%'; if (p >= 1) return p.toFixed(1) + '%'; if (p >= 0.01) return p.toFixed(2) + '%'; return '<0.01%'; }
+
+// ----------------------------------------------------------------- parsing
+function splitLine(line, d) {
+  var out = [], cur = '', q = false;
+  for (var i = 0; i < line.length; i++) {
+    var c = line[i];
+    if (q) { if (c === '"') { if (line[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += c; }
+    else if (c === '"') q = true;
+    else if (c === d) { out.push(cur); cur = ''; }
+    else cur += c;
+  }
+  out.push(cur);
+  return out.map(function (s) { return s.trim(); });
+}
+function parseTable(text) {
+  var lines = text.replace(/\r/g, '').split('\n').filter(function (l) { return l.trim() !== ''; });
+  if (lines.length < 2) return null;
+  var f = lines[0], d = f.indexOf('\t') >= 0 ? '\t' : (f.split(';').length > f.split(',').length ? ';' : ',');
+  var rows = lines.map(function (l) { return splitLine(l, d); });
+  var headers = rows.shift().map(function (h, i) { return h || ('Column ' + (i + 1)); });
+  return { headers: headers, rows: rows };
+}
+function isNumLike(s) { return /^[<≤]?\s*[0-9.,]+(e[+-]?\d+)?$/i.test((s || '').trim()); }
+function truthy(s) { return /^(1|true|yes|y|t|nd|<loq|below|censored|c)$/i.test((s || '').trim()); }
+
+function showMsgs(el, list) {
+  $(el).innerHTML = list.map(function (m) { return '<div class="msg ' + m.k + '">' + m.t + '</div>'; }).join('');
+}
+
+
+function setTable(t, weights) {
+  S.table = t; S.weights = weights || {};
+  var nc = t.headers.length, i;
+  var numFrac = t.headers.map(function (_, c) { var n = 0; t.rows.forEach(function (r) { if (isNumLike(r[c])) n++; }); return n / t.rows.length; });
+  var vi = -1;
+  t.headers.forEach(function (h, c) { if (vi < 0 && /result|conc|value|mg|ppm|exposure|measure/i.test(h) && numFrac[c] > 0.8) vi = c; });
+  if (vi < 0) for (i = nc - 1; i >= 0; i--) if (numFrac[i] > 0.8) { vi = i; break; }
+  if (vi < 0) { var best = 0; numFrac.forEach(function (f, c) { if (f > best) { best = f; vi = c; } }); }
+  var opts = t.headers.map(function (h, c) { return '<option value="' + c + '">' + esc(h) + '</option>'; }).join('');
+  $('colValue').innerHTML = opts; $('colValue').value = vi >= 0 ? vi : 0;
+  $('mapping').hidden = false;
+  $('lblValue').hidden = numFrac.filter(function (f) { return f > 0.8; }).length <= 1;
+  buildFactorBox();
+  onMappingChange();
+}
+function distinct(c, rows) { var s = {}, o = []; rows.forEach(function (r) { var v = (r[c] || '').trim(); if (v !== '' && !(v in s)) { s[v] = 1; o.push(v); } }); return o; }
+function buildFactorBox() {
+  var t = S.table, vi = +$('colValue').value, html = '', picked = 0, cells = 1;
+  t.headers.forEach(function (h, c) {
+    if (c === vi) return;
+    var lv = distinct(c, t.rows);
+    if (lv.length < 2 || lv.length > 12) return;
+    var num = t.rows.filter(function (r) { return isNumLike(r[c]); }).length / t.rows.length;
+    var on = picked < 3 && lv.length <= 6 && (num < 0.8 || lv.length <= 4) && cells * lv.length <= 32;
+    if (on) { picked++; cells *= lv.length; }
+    html += '<label class="chip"><input type="checkbox" class="fcol" value="' + c + '"' + (on ? ' checked' : '') + '>' + esc(h) + '</label>';
+  });
+  $('factorBox').innerHTML = html || '<span class="hint">No column with 2 to 12 different values. Only the standard estimate is available.</span>';
+}
+function selectedFactors() {
+  return Array.prototype.slice.call(document.querySelectorAll('.fcol:checked')).map(function (b) { return +b.value; }).slice(0, 3);
+}
+function factorSpec() {
+  var t = S.table;
+  return selectedFactors().map(function (c) { return { col: c, name: t.headers[c], levels: distinct(c, t.rows) }; });
+}
+function onMappingChange() {
+  buildWeights();
+  $('stepWeights').hidden = false;
+}
+function buildWeights() {
+  var fs = factorSpec(), tb = $('wTable');
+  if (!fs.length) { tb.innerHTML = '<tr><td class="hint">No conditions selected: only the standard estimate will be produced.</td></tr>'; $('btnEqual').hidden = true; $('wTotal').hidden = true; $('btnRun').disabled = false; return; }
+  $('btnEqual').hidden = false; $('wTotal').hidden = false;
+  var des = PS.buildDesign(fs, { alphaMean: -1, alphaSd: 2, mainSd: .75, intSd: .25, interactions: false });
+  var counts = countCells(fs, des), eq = Math.round(10000 / des.J) / 100;
+  var html = '<tr><th>Condition</th><th>Results</th><th>Sample share</th><th>Population share</th></tr>';
+  des.cells.forEach(function (cell) {
+    var key = cell.label; if (!(key in S.weights)) S.weights[key] = eq;
+  });
+  des.cells.forEach(function (cell, j) {
+    var key = cell.label, sh = counts.total ? counts.n[j] / counts.total : 0;
+    html += '<tr><td>' + esc(cell.label) + (counts.n[j] === 0 ? '<span class="tag">no results</span>' : '') + '</td><td class="mono">' + counts.n[j] + '</td><td class="mono">' + pct(sh) + '</td><td><span class="pctbox"><input type="number" class="wIn" data-key="' + esc(key) + '" step="any" min="0" value="' + S.weights[key] + '" aria-label="Population share for ' + esc(cell.label) + '"><span>%</span></span></td></tr>';
+  });
+  tb.innerHTML = html;
+  Array.prototype.forEach.call(document.querySelectorAll('.wIn'), function (i) { i.addEventListener('input', wSum); });
+  wSum();
+}
+function wSum() {
+  var s = 0; Array.prototype.forEach.call(document.querySelectorAll('.wIn'), function (i) { s += +i.value || 0; S.weights[i.getAttribute('data-key')] = +i.value || 0; });
+  var ok = Math.abs(s - 100) <= 0.05, el = $('wTotal');
+  el.className = 'total ' + (ok ? 'ok' : 'bad');
+  el.textContent = ok ? 'Total 100%' : 'Total ' + (Math.round(s * 100) / 100) + '%. Shares must add to 100%.';
+  $('btnRun').disabled = !ok;
+  markStale();
+}
+function markStale() { if (S.last && !$('results').hidden) $('runNote').textContent = 'Inputs changed. Run again to update the results.'; }
+
+function countCells(fs, des) {
+  var t = S.table, n = new Array(des.J).fill(0), total = 0, map = {};
+  des.cells.forEach(function (c, j) { map[c.label] = j; });
+  t.rows.forEach(function (r) {
+    var lab = fs.map(function (f) { return (r[f.col] || '').trim(); }).join(' / ');
+    if (lab in map) { n[map[lab]]++; total++; }
+  });
+  return { n: n, total: total, map: map };
+}
+
+// ----------------------------------------------------------- collect + run
+function collect() {
+  var t = S.table, errs = [], warns = [];
+  var vi = +$('colValue').value, oel = +$('oel').value;
+  if (!(oel > 0)) errs.push('Enter an exposure standard greater than zero.');
+  var fs = factorSpec();
+  var obs = [];
+  t.rows.forEach(function (r, i) {
+    var raw = (r[vi] || '').trim(), rowNo = i + 2, cens = false, num;
+    if (raw === '') { errs.push('Row ' + rowNo + ': the result is empty.'); return; }
+    if (/^[<≤]/.test(raw)) { cens = true; raw = raw.replace(/^[<≤]\s*/, ''); }
+    if (/^>/.test(raw)) { errs.push('Row ' + rowNo + ': results above a limit ("' + esc(raw) + '") are not supported.'); return; }
+    num = parseFloat(raw.replace(/,/g, ''));
+    if (!isFinite(num) || num <= 0) { errs.push('Row ' + rowNo + ': "' + esc(raw) + '" is not a positive number.'); return; }
+    var lab = fs.map(function (f) { return (r[f.col] || '').trim(); });
+    if (lab.some(function (x) { return x === ''; })) { errs.push('Row ' + rowNo + ': a condition value is empty.'); return; }
+    obs.push({ v: num, cens: cens, lab: lab.join(' / '), lv: lab });
+  });
+  if (!obs.length && !errs.length) errs.push('No measurements found.');
+  if (errs.length > 8) { var more = errs.length - 8; errs = errs.slice(0, 8); errs.push('…and ' + more + ' more.'); }
+  if (errs.length) return { errs: errs };
+  if (obs.length < 3) warns.push('Only ' + obs.length + ' results: intervals will be very wide and mostly reflect the priors.');
+  var ncens = obs.filter(function (o) { return o.cens; }).length;
+  if (ncens === obs.length) warns.push('Every result is below the LOQ. The estimate depends almost entirely on the priors.');
+  else if (ncens / obs.length > 0.5) warns.push(Math.round(100 * ncens / obs.length) + '% of results are below the LOQ. Above about 50%, the posterior median of the GM is a poor summary; use the credible limits.');
+  var vals = obs.map(function (o) { return o.v; }).sort(function (a, b) { return a - b; });
+  var med = vals[Math.floor(vals.length / 2)];
+  if (med / oel > 50 || med / oel < 0.002) warns.push('The median result is ' + fmt(med / oel) + ' times the standard. Check that results and the standard use the same units (for example mg/m³ and µg/m³).');
+  return { obs: obs, fs: fs, oel: oel, ncens: ncens, warns: warns };
+}
+
+function progress(f) { $('prog').hidden = false; $('prog').firstElementChild.style.width = Math.round(100 * f) + '%'; }
+
+async function run() {
+  var c = collect();
+  if (c.errs) { showMsgs('runMsgs', c.errs.map(function (e) { return { k: 'err', t: e }; })); return; }
+  var msgs = c.warns.map(function (w) { return { k: 'warn', t: esc(w) }; });
+  var fs = c.fs, oel = c.oel, N = c.obs.length;
+  var priors = { aMean: -1, aSd: 2, mSd: 0.75, iSd: 0.25, sGm: 0.84, sGsd: 1.87 };
+  var chains = 4, iter = 1000, seed = 20261202;
+  var y = c.obs.map(function (o) { return Math.log(o.v / oel); });
+  var cens = c.obs.map(function (o) { return o.cens ? 1 : 0; });
+  var common = { chains: chains, warmup: 1000, iter: iter, adaptDelta: 0.99, seed: seed, oel: oel, sLogMean: Math.log(priors.sGm), sLogSd: Math.log(priors.sGsd) };
+  $('btnRun').disabled = true; $('runNote').textContent = ''; showMsgs('runMsgs', msgs); progress(0);
+  await new Promise(function (r) { setTimeout(r, 30); });
+  try {
+    var naive = await PS.fitEstimator(Object.assign({ y: y, cens: cens, cell: y.map(function () { return 0; }), J: 1, K: 1, X: [[1]], G: 1, sigmaGroup: [0], priorMean: [priors.aMean], priorSd: [priors.aSd], w: [1] }, common), function (f) { progress(f * (fs.length ? 0.5 : 1)); });
+    var prop = null, des = null, wNorm = null, counts = null;
+    if (fs.length) {
+      des = PS.buildDesign(fs, { alphaMean: priors.aMean, alphaSd: priors.aSd, mainSd: priors.mSd, intSd: priors.iSd, interactions: fs.length > 1 });
+      counts = countCells(fs, des);
+      var raw = des.cells.map(function (cl) { return S.weights[cl.label] != null ? S.weights[cl.label] : 100 / des.J; });
+      var sum = raw.reduce(function (a, b) { return a + b; }, 0);
+      if (!(sum > 0) || raw.some(function (v) { return v < 0 || !isFinite(v); })) throw new Error('Population shares must be non-negative and sum to more than zero.');
+      wNorm = raw.map(function (v) { return v / sum; });
+      var cellIdx = c.obs.map(function (o) { return counts.map[o.lab]; });
+      var sb = -1, sg, G;
+      if (sb >= 0) { sg = des.cells.map(function (cl) { return cl.idx[sb]; }); G = fs[sb].levels.length; } else { sg = des.cells.map(function () { return 0; }); G = 1; }
+      var empty = des.cells.filter(function (cl, j) { return counts.n[j] === 0; }).map(function (cl) { return cl.label; });
+      if (empty.length) msgs.push({ k: 'warn', t: 'No results for: ' + esc(empty.join('; ')) + '. These conditions are estimated from the others through the regression, and the answer depends on the model structure and priors.' });
+      var allCens = des.cells.filter(function (cl, j) { return counts.n[j] > 0 && c.obs.filter(function (o, i) { return cellIdx[i] === j; }).every(function (o) { return o.cens; }); }).map(function (cl) { return cl.label; });
+      if (allCens.length) msgs.push({ k: 'warn', t: 'Every result is below the LOQ in: ' + esc(allCens.join('; ')) + '.' });
+      var tiny = des.cells.filter(function (cl, j) { return counts.n[j] > 0 && counts.n[j] < 2; }).length;
+      prop = await PS.fitEstimator(Object.assign({ y: y, cens: cens, cell: cellIdx, J: des.J, K: des.K, X: des.X, G: G, sigmaGroup: sg, priorMean: des.priorMean, priorSd: des.priorSd, w: wNorm }, common), function (f) { progress(0.5 + f * 0.5); });
+      prop.G = G; prop.sigBy = sb;
+    }
+    S.last = { c: c, naive: naive, prop: prop, des: des, counts: counts, w: wNorm, oel: oel, priors: priors, chains: chains, iter: iter, seed: seed, fs: fs, msgs: msgs };
+    showMsgs('runMsgs', msgs.filter(function (m) { return true; }));
+    render();
+  } catch (e) {
+    showMsgs('runMsgs', [{ k: 'err', t: esc(e.message || String(e)) }]);
+  }
+  $('btnRun').disabled = false; $('prog').hidden = true; wSum(); $('runNote').textContent = '';
+}
+
+// ----------------------------------------------------------------- results
+function smry(fit, key) { return PS.summarise(fit.stats[key]); }
+var UNITS = 'mg/m³';
+function render() {
+  var L = S.last, u = $('units').value || 'mg/m³'; UNITS = u;
+  var ests = [{ key: 'naive', name: 'Standard', fit: L.naive, color: 'var(--s1)' }];
+  if (L.prop) ests.push({ key: 'prop', name: 'With poststratification', fit: L.prop, color: 'var(--s2)' });
+  ests.forEach(function (e) { ['gm', 'am', 'gsd', 'p95', 'exc'].forEach(function (k) { e[k] = smry(e.fit, k); }); e.pAbove = e.fit.stats.p95.reduce(function (a, v) { return a + (v > L.oel ? 1 : 0); }, 0) / e.fit.stats.p95.length; });
+  L.ests = ests;
+  $('results').hidden = false;
+  // cards
+  $('cards').innerHTML = ests.map(function (e) {
+    var above = e.p95.median > L.oel;
+    return '<div class="est"><div><span class="sw" style="background:' + e.color + '"></span><strong>' + e.name + '</strong></div>' +
+      '<div class="lab">95th percentile, median</div><div class="big">' + fmt3(e.p95.median) + ' <span style="font-size:.9rem;font-weight:400">' + esc(u) + '</span></div>' +
+      '<span class="pill ' + (above ? 'bad' : 'good') + '">' + (above ? 'Above exposure standard' : 'Below exposure standard') + '</span>' +
+      '<div class="lab">Exceedance fraction, median <strong class="mono">' + pct(e.exc.median) + '</strong></div></div>';
+  }).join('');
+  var rm = [];
+  if (!L.prop) rm.push({ k: '', t: 'No conditions selected, so only the standard estimate is shown.' });
+  showMsgs('resMsgs', rm);
+  $('legend').innerHTML = ests.map(function (e) { return '<span><span class="sw" style="background:' + e.color + '"></span>' + e.name + '</span>'; }).join('');
+  drawChart(ests, L.oel, u);
+  // decision table
+  function row(e, kind) {
+    var d = e[kind], isP = kind === 'p95';
+    function c(v) { var hi = isP ? v > L.oel : v > 0.05; return '<td class="mono' + (hi ? ' above' : '') + '">' + (isP ? fmt3(v) : pct(v)) + '</td>'; }
+    return '<tr><td><span class="sw" style="background:' + e.color + '"></span>' + e.name + '</td>' + c(d.median) + c(d.ucl70) + c(d.ucl95) + '</tr>';
+  }
+  var h = '<tr><th></th><th>Median</th><th>70% UCL</th><th>95% UCL</th></tr>';
+  h += '<tr class="grp"><td colspan="4">95th percentile (' + esc(u) + ')</td></tr>' + ests.map(function (e) { return row(e, 'p95'); }).join('');
+  h += '<tr class="grp"><td colspan="4">Exceedance fraction</td></tr>' + ests.map(function (e) { return row(e, 'exc'); }).join('');
+  $('tDecision').innerHTML = h;
+  renderDiag();
+
+}
+
+function renderDiag() {
+  var L = S.last, probs = [], list = [{ n: 'Standard', f: L.naive }].concat(L.prop ? [{ n: 'With poststratification', f: L.prop }] : []);
+  list.forEach(function (e) {
+    var d = e.f.diag;
+    if (d.divergent > 0) probs.push(e.n + ': ' + d.divergent + ' divergent transitions (heavy censoring is the usual cause)');
+    if (d.maxRhat > 1.01) probs.push(e.n + ': chains have not converged (R-hat ' + d.maxRhat.toFixed(3) + ')');
+    if (d.minEss < 400) probs.push(e.n + ': effective sample size below 400');
+  });
+  $('diag').innerHTML = probs.length ? '<div class="msg warn">Sampler check problem. ' + esc(probs.join('; ')) + '. Treat the intervals with caution.</div>' : '';
+}
+
+// ------------------------------------------------------------------- chart
+function drawChart(ests, oel, units) {
+  var W = 760, H = 300, m = { l: 16, r: 16, t: 14, b: 44 }, pw = W - m.l - m.r, ph = H - m.t - m.b;
+  var series = ests.map(function (e) {
+    var lg = Float64Array.from(e.fit.stats.p95, function (v) { return Math.log10(v); }).sort();
+    return { e: e, lg: lg };
+  });
+  var lo = Infinity, hi = -Infinity;
+  series.forEach(function (s) { lo = Math.min(lo, PS.quantile(s.lg, 0.005)); hi = Math.max(hi, PS.quantile(s.lg, 0.995)); });
+  lo = Math.min(lo, Math.log10(oel) - 0.15); hi = Math.max(hi, Math.log10(oel) + 0.15);
+  var pad = 0.05 * (hi - lo); lo -= pad; hi += pad;
+  var NG = 240, xs = [], i;
+  for (i = 0; i < NG; i++) xs.push(lo + (hi - lo) * i / (NG - 1));
+  var ymax = 0;
+  series.forEach(function (s) {
+    var n = s.lg.length, q1 = PS.quantile(s.lg, .25), q3 = PS.quantile(s.lg, .75), sd = 0, mn = 0;
+    for (i = 0; i < n; i++) mn += s.lg[i]; mn /= n; for (i = 0; i < n; i++) sd += (s.lg[i] - mn) * (s.lg[i] - mn); sd = Math.sqrt(sd / (n - 1));
+    var bw = 0.9 * Math.min(sd, (q3 - q1) / 1.34) * Math.pow(n, -0.2); if (!(bw > 0)) bw = 0.02;
+    // bin draws then convolve (fast)
+    var nb = 600, bins = new Float64Array(nb), step = (hi - lo) / nb;
+    for (i = 0; i < n; i++) { var b = Math.floor((s.lg[i] - lo) / step); if (b >= 0 && b < nb) bins[b]++; }
+    s.d = xs.map(function (x) { var t = 0; for (var b = 0; b < nb; b++) { if (!bins[b]) continue; var z = (x - (lo + (b + .5) * step)) / bw; if (Math.abs(z) < 5) t += bins[b] * Math.exp(-.5 * z * z); } return t / (n * bw * 2.5066); });
+    s.cdfSorted = s.lg;
+    ymax = Math.max(ymax, Math.max.apply(null, s.d));
+  });
+  function X(v) { return m.l + pw * (v - lo) / (hi - lo); }
+  function Y(v) { return m.t + ph * (1 - v / (ymax * 1.08)); }
+  var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Posterior densities of the population 95th percentile for each estimator, with the exposure standard marked">';
+  // ticks
+  var ticks = [], k0 = Math.floor(lo), k1 = Math.ceil(hi);
+  for (var k = k0; k <= k1; k++) [1, 2, 5].forEach(function (mm) { var v = mm * Math.pow(10, k), lv = Math.log10(v); if (lv >= lo && lv <= hi) ticks.push(v); });
+  if (ticks.length < 3) for (k = k0; k <= k1; k++) [3, 4, 6, 7, 8, 9].forEach(function (mm) { var v = mm * Math.pow(10, k), lv = Math.log10(v); if (lv >= lo && lv <= hi) ticks.push(v); });
+  ticks.sort(function (a, b) { return a - b; });
+  ticks.forEach(function (v) {
+    var x = X(Math.log10(v));
+    svg += '<line x1="' + x + '" x2="' + x + '" y1="' + m.t + '" y2="' + (m.t + ph) + '" stroke="var(--line2)"/>' +
+      '<text x="' + x + '" y="' + (m.t + ph + 16) + '" text-anchor="middle">' + (v >= 1 ? v : +v.toPrecision(1)) + '</text>';
+  });
+  svg += '<line x1="' + m.l + '" x2="' + (W - m.r) + '" y1="' + (m.t + ph) + '" y2="' + (m.t + ph) + '" stroke="var(--line)"/>';
+  series.forEach(function (s) {
+    var line = '';
+    xs.forEach(function (x, j) { line += (j ? ' L' : 'M') + X(x).toFixed(1) + ',' + Y(s.d[j]).toFixed(1); });
+    var area = 'M' + X(xs[0]).toFixed(1) + ',' + Y(0).toFixed(1) + ' L' + line.slice(1) + ' L' + X(xs[NG - 1]).toFixed(1) + ',' + Y(0).toFixed(1) + ' Z';
+    svg += '<path d="' + area + '" fill="' + s.e.color + '" fill-opacity=".22"/><path d="' + line + '" fill="none" stroke="' + s.e.color + '" stroke-width="2" stroke-linejoin="round"/>';
+    var md = Math.log10(s.e.p95.median);
+    svg += '<line x1="' + X(md) + '" x2="' + X(md) + '" y1="' + Y(0) + '" y2="' + (Y(0) - 10) + '" stroke="' + s.e.color + '" stroke-width="3"/>';
+  });
+  var xo = X(Math.log10(oel));
+  svg += '<line x1="' + xo + '" x2="' + xo + '" y1="' + m.t + '" y2="' + (m.t + ph) + '" stroke="var(--ink)" stroke-width="1.5" stroke-dasharray="5 4"/>' +
+    '<text class="lbl" x="' + (xo + 5) + '" y="' + (m.t + 10) + '" style="fill:var(--ink)">Exposure standard ' + fmt(oel) + '</text>' +
+    '<text x="' + (m.l + pw / 2) + '" y="' + (H - 6) + '" text-anchor="middle">95th percentile (' + esc(units) + ', log scale)</text>';
+  svg += '<rect id="hov" x="' + m.l + '" y="' + m.t + '" width="' + pw + '" height="' + ph + '" fill="transparent"/><line id="cross" y1="' + m.t + '" y2="' + (m.t + ph) + '" stroke="var(--ink3)" visibility="hidden"/></svg>';
+  var box = $('chart'); box.innerHTML = svg + '<div class="tip" id="tip" hidden></div>';
+  var hov = $('hov'), cross = $('cross'), tip = $('tip'), svgEl = box.querySelector('svg');
+  function move(ev) {
+    var r = svgEl.getBoundingClientRect(), px = (ev.clientX - r.left) * W / r.width;
+    var lv = lo + (px - m.l) / pw * (hi - lo); if (lv < lo || lv > hi) return;
+    cross.setAttribute('x1', px); cross.setAttribute('x2', px); cross.setAttribute('visibility', 'visible');
+    var v = Math.pow(10, lv), txt = '<strong>P95 = ' + fmt3(v) + ' ' + esc(units) + '</strong>';
+    series.forEach(function (s) {
+      var a = s.cdfSorted, l = 0, h2 = a.length; while (l < h2) { var mid = (l + h2) >> 1; if (a[mid] <= lv) l = mid + 1; else h2 = mid; }
+      txt += '<div><span class="sw" style="background:' + s.e.color + '"></span>' + s.e.name + ': P(P95 ≤ this) = ' + (100 * l / a.length).toFixed(0) + '%</div>';
+    });
+    tip.innerHTML = txt; tip.hidden = false;
+    var bx = box.getBoundingClientRect(), tx = ev.clientX - bx.left + 14; if (tx + 240 > bx.width) tx = ev.clientX - bx.left - 250;
+    tip.style.left = Math.max(0, tx) + 'px'; tip.style.top = '20px';
+  }
+  hov.addEventListener('pointermove', move);
+  hov.addEventListener('pointerleave', function () { tip.hidden = true; cross.setAttribute('visibility', 'hidden'); });
+}
+
+// ---------------------------------------------------------------- summary
+function copyText(t) {
+  function fallback() { var ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); } catch (e) {} ta.remove(); }
+  try { return navigator.clipboard.writeText(t).catch(fallback); } catch (e) { fallback(); return Promise.resolve(); }
+}
+function summaryText() {
+  var L = S.last, u = UNITS, t = 'Exposure post-stratification tool: proof of concept\nExposure standard: ' + L.oel + ' ' + u + '; results: ' + L.c.obs.length + ' (' + L.c.ncens + ' below LOQ)\n\n';
+  t += ['Estimator', 'P95 median', 'P95 UCL70', 'P95 UCL90', 'P95 UCL95', 'Exceedance median', 'Exc UCL70', 'Exc UCL90', 'Exc UCL95', 'GM median', 'AM median'].join('\t') + '\n';
+  L.ests.forEach(function (e) { t += [e.name, fmt3(e.p95.median), fmt3(e.p95.ucl70), fmt3(e.p95.ucl90), fmt3(e.p95.ucl95), pct(e.exc.median), pct(e.exc.ucl70), pct(e.exc.ucl90), pct(e.exc.ucl95), fmt3(e.gm.median), fmt3(e.am.median)].join('\t') + '\n'; });
+  var p = L.priors;
+  t += '\nSettings: ' + L.chains + ' chains x ' + L.iter + ' draws, adapt_delta 0.99, seed ' + L.seed + '; alpha ~ N(' + p.aMean + ',' + p.aSd + '), effects ~ N(0,' + p.mSd + '), interactions ~ N(0,' + p.iSd + '), sigma ~ lognormal(GM ' + p.sGm + ', GSD ' + p.sGsd + ').\nPopulation P95 is found by inverting the weighted population CDF, not from GM and GSD.\n';
+  return t;
+}
+
+// ------------------------------------------------------------------ events
+function loadText(txt, weights) {
+  var t = parseTable(txt);
+  if (!t) { showMsgs('dataMsgs', [{ k: 'err', t: 'Could not read a table. Include a header row and at least one data row.' }]); $('mapping').hidden = true; $('stepWeights').hidden = true; return; }
+  if (t.rows.length > 5000) { showMsgs('dataMsgs', [{ k: 'err', t: 'Limit is 5,000 rows.' }]); return; }
+  showMsgs('dataMsgs', []);
+  $('results').hidden = true;
+  setTable(t, weights);
+}
+var pasteTimer = null;
+$('paste').addEventListener('input', function () {
+  clearTimeout(pasteTimer);
+  pasteTimer = setTimeout(function () { var v = $('paste').value.trim(); if (v) loadText(v); }, 500);
+});
+$('file').addEventListener('change', function (ev) {
+  var f = ev.target.files[0]; if (!f) return;
+  var r = new FileReader(); r.onload = function () { $('paste').value = r.result; loadText(r.result); }; r.readAsText(f);
+});
+$('btnExample').addEventListener('click', function () {
+  $('paste').value = EXAMPLE.csv; $('oel').value = EXAMPLE.oel; $('units').value = 'mg/m³';
+  loadText(EXAMPLE.csv, Object.assign({}, EXAMPLE.weights));
+  run();
+});
+$('colValue').addEventListener('change', function () { buildFactorBox(); onMappingChange(); });
+$('factorBox').addEventListener('change', onMappingChange);
+$('btnEqual').addEventListener('click', function () { S.weights = {}; buildWeights(); });
+['oel', 'units'].forEach(function (id) { $(id).addEventListener('input', markStale); });
+$('btnRun').addEventListener('click', run);
+$('btnCopy').addEventListener('click', function () { copyText(summaryText()).then(function () { $('copyNote').textContent = 'Copied.'; }); });
+$('btnExample').click();
+</script>
