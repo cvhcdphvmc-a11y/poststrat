@@ -1,3 +1,5 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body>
 <title>Exposure Post-stratification Tool</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -100,6 +102,34 @@ summary{cursor:pointer;font-weight:500}
 #tDecision th:first-child,#tDecision td:first-child{text-align:left}
 #tDecision tr.grp td{background:var(--chip);color:var(--ink2);font-size:.8rem;font-weight:600;text-align:left;padding-block:4px}
 .line{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center}
+
+.s2{display:none}
+@media (max-width:600px){
+  body{padding-inline:10px;padding-block:14px 40px;font-size:16px}
+  .wrap{gap:14px}
+  h1{font-size:1.3rem}
+  .card{padding:14px;gap:12px}
+  input[type=text],input[type=number],select,textarea{font-size:16px;padding:10px;min-height:44px}
+  textarea{font-size:14px;min-height:110px}
+  button{min-height:44px;padding:9px 14px}
+  #btnExample,#btnRun{width:100%}
+  .line{gap:10px}
+  .line>label{width:100%;flex-direction:column!important;align-items:flex-start!important}
+  .row{grid-template-columns:1fr 1fr}
+  .row label:first-child{grid-column:1/-1}
+  .chip{padding:8px 14px;font-size:.95rem}
+  th,td{padding:8px 6px}
+  #wTable th:nth-child(2),#wTable td:nth-child(2),#wTable th:nth-child(3),#wTable td:nth-child(3){display:none}
+  #wTable td:first-child{white-space:normal}
+  .pctbox input{padding-right:28px}
+  #wTable td:first-child{text-align:left}
+  .s2{display:block;font-size:.75rem;color:var(--ink3);margin-top:2px}
+  #tDecision{font-size:.8rem}
+  #tDecision td:first-child{white-space:normal;min-width:88px}
+  .cards2{grid-template-columns:1fr}
+  .est .big{font-size:1.8rem}
+  .tip{white-space:normal;max-width:210px}
+}
 </style>
 <div class="wrap">
   <header style="display:flex;flex-direction:column;gap:8px">
@@ -117,7 +147,7 @@ summary{cursor:pointer;font-weight:500}
     <div id="mapping" hidden style="display:flex;flex-direction:column;gap:14px">
       <div class="row">
         <label id="lblValue">Result column<select id="colValue"></select></label>
-        <label>Exposure standard<input type="number" id="oel" step="any" min="0" value="5"></label>
+        <label>Exposure standard<input type="number" id="oel" inputmode="decimal" step="any" min="0" value="5"></label>
         <label>Units<input type="text" id="units" value="mg/m³"></label>
       </div>
       <div>
@@ -769,7 +799,7 @@ function buildWeights() {
   });
   des.cells.forEach(function (cell, j) {
     var key = cell.label, sh = counts.total ? counts.n[j] / counts.total : 0;
-    html += '<tr><td>' + esc(cell.label) + (counts.n[j] === 0 ? '<span class="tag">no results</span>' : '') + '</td><td class="mono">' + counts.n[j] + '</td><td class="mono">' + pct(sh) + '</td><td><span class="pctbox"><input type="number" class="wIn" data-key="' + esc(key) + '" step="any" min="0" value="' + S.weights[key] + '" aria-label="Population share for ' + esc(cell.label) + '"><span>%</span></span></td></tr>';
+    html += '<tr><td>' + esc(cell.label) + (counts.n[j] === 0 ? '<span class="tag">no results</span>' : '') + '<span class="s2">' + counts.n[j] + ' results, ' + pct(sh) + ' of sample</span></td><td class="mono">' + counts.n[j] + '</td><td class="mono">' + pct(sh) + '</td><td><span class="pctbox"><input type="number" class="wIn" inputmode="decimal" data-key="' + esc(key) + '" step="any" min="0" value="' + S.weights[key] + '" aria-label="Population share for ' + esc(cell.label) + '"><span>%</span></span></td></tr>';
   });
   tb.innerHTML = html;
   Array.prototype.forEach.call(document.querySelectorAll('.wIn'), function (i) { i.addEventListener('input', wSum); });
@@ -920,7 +950,8 @@ function renderDiag() {
 
 // ------------------------------------------------------------------- chart
 function drawChart(ests, oel, units) {
-  var W = 760, H = 300, m = { l: 16, r: 16, t: 14, b: 44 }, pw = W - m.l - m.r, ph = H - m.t - m.b;
+  var bw0 = $('chart').clientWidth, W = Math.max(300, Math.min(760, bw0 || 760)), H = W < 480 ? 250 : 300; S.chartArgs = [ests, oel, units]; S.chartW = W;
+  var m = { l: 16, r: 16, t: 14, b: 44 }, pw = W - m.l - m.r, ph = H - m.t - m.b;
   var series = ests.map(function (e) {
     var lg = Float64Array.from(e.fit.stats.p95, function (v) { return Math.log10(v); }).sort();
     return { e: e, lg: lg };
@@ -967,9 +998,9 @@ function drawChart(ests, oel, units) {
   });
   var xo = X(Math.log10(oel));
   svg += '<line x1="' + xo + '" x2="' + xo + '" y1="' + m.t + '" y2="' + (m.t + ph) + '" stroke="var(--ink)" stroke-width="1.5" stroke-dasharray="5 4"/>' +
-    '<text class="lbl" x="' + (xo + 5) + '" y="' + (m.t + 10) + '" style="fill:var(--ink)">Exposure standard ' + fmt(oel) + '</text>' +
+    '<text class="lbl" x="' + (xo > W * 0.6 ? xo - 5 : xo + 5) + '" text-anchor="' + (xo > W * 0.6 ? 'end' : 'start') + '" y="' + (m.t + 10) + '" style="fill:var(--ink)">Exposure standard ' + fmt(oel) + '</text>' +
     '<text x="' + (m.l + pw / 2) + '" y="' + (H - 6) + '" text-anchor="middle">95th percentile (' + esc(units) + ', log scale)</text>';
-  svg += '<rect id="hov" x="' + m.l + '" y="' + m.t + '" width="' + pw + '" height="' + ph + '" fill="transparent"/><line id="cross" y1="' + m.t + '" y2="' + (m.t + ph) + '" stroke="var(--ink3)" visibility="hidden"/></svg>';
+  svg += '<rect id="hov" style="touch-action:pan-y" x="' + m.l + '" y="' + m.t + '" width="' + pw + '" height="' + ph + '" fill="transparent"/><line id="cross" y1="' + m.t + '" y2="' + (m.t + ph) + '" stroke="var(--ink3)" visibility="hidden"/></svg>';
   var box = $('chart'); box.innerHTML = svg + '<div class="tip" id="tip" hidden></div>';
   var hov = $('hov'), cross = $('cross'), tip = $('tip'), svgEl = box.querySelector('svg');
   function move(ev) {
@@ -985,7 +1016,7 @@ function drawChart(ests, oel, units) {
     var bx = box.getBoundingClientRect(), tx = ev.clientX - bx.left + 14; if (tx + 240 > bx.width) tx = ev.clientX - bx.left - 250;
     tip.style.left = Math.max(0, tx) + 'px'; tip.style.top = '20px';
   }
-  hov.addEventListener('pointermove', move);
+  hov.addEventListener('pointermove', move); hov.addEventListener('pointerdown', move);
   hov.addEventListener('pointerleave', function () { tip.hidden = true; cross.setAttribute('visibility', 'hidden'); });
 }
 
@@ -1030,7 +1061,12 @@ $('colValue').addEventListener('change', function () { buildFactorBox(); onMappi
 $('factorBox').addEventListener('change', onMappingChange);
 $('btnEqual').addEventListener('click', function () { S.weights = {}; buildWeights(); });
 ['oel', 'units'].forEach(function (id) { $(id).addEventListener('input', markStale); });
-$('btnRun').addEventListener('click', run);
+$('btnRun').addEventListener('click', function () {
+  run().then(function () { if (window.matchMedia('(max-width:700px)').matches && S.last) $('results').scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+});
+window.addEventListener('resize', function () {
+  if (S.chartArgs && !$('results').hidden && $('chart').clientWidth && Math.abs(Math.min(760, $('chart').clientWidth) - S.chartW) > 8) drawChart.apply(null, S.chartArgs);
+});
 $('btnCopy').addEventListener('click', function () { copyText(summaryText()).then(function () { $('copyNote').textContent = 'Copied.'; }); });
 $('btnExample').click();
 </script>
